@@ -1,11 +1,11 @@
 import express from 'express'
 import cors from 'cors'
+import { pool } from './config/conexion.bd.js'
 import rutasEjemplo from './modulos/ejemplo/rutas.ejemplo.js'
 
 const app = express()
 
-// CORS: CORS_ORIGIN acepta uno o varios orígenes separados por coma.
-// Si no está definido, se permite cualquier origen (útil en desarrollo).
+// CORS
 const origenes = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map((origen) => origen.trim())
   : '*'
@@ -14,13 +14,18 @@ const origenes = process.env.CORS_ORIGIN
 app.use(cors({ origin: origenes }))
 app.use(express.json())
 
-// Ruta de salud
-app.get('/health', (req, res) => {
-  res.status(200).json({ mensaje: 'API de Viper funcionando correctamente' })
+// Ruta de salud: además de responder, comprueba que la base de datos contesta
+app.get('/health', async (req, res) => {
+  try {
+    await pool.query('select 1')
+    res.status(200).json({ mensaje: 'API de Viper funcionando correctamente' })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ mensaje: 'No se pudo conectar con la base de datos' })
+  }
 })
 
-// Rutas de los módulos: cada módulo nuevo agrega su línea acá
-// (por ejemplo app.use('/api/auth', rutasAutenticacion))
+// Rutas de los módulos
 app.use('/api/ejemplo', rutasEjemplo)
 
 // Ruta no encontrada
