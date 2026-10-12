@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import { pool } from './config/conexion.bd.js'
 import rutasEjemplo from './modulos/ejemplo/rutas.ejemplo.js'
+import rutasAutenticacion from './modulos/autenticacion/rutas.autenticacion.js'
 
 const app = express()
 
@@ -27,6 +28,7 @@ app.get('/health', async (req, res) => {
 
 // Rutas de los módulos
 app.use('/api/ejemplo', rutasEjemplo)
+app.use('/api/auth', rutasAutenticacion)
 
 // Ruta no encontrada
 app.use((req, res) => {
