@@ -27,10 +27,10 @@ export const generarTokenJWT = ({ usuarioId, rol, sesionId }) => {
 
 // Verifica la firma y el vencimiento del token. Devuelve el contenido ({ sub, rol, sid, iat, exp })
 // o null si el token es falso, está alterado o venció.
-export const verificarTokenJWT = (token) => {
+export const verificarTokenJWT = (token, { ignorarVencimiento = false } = {}) => {
   if (!process.env.JWT_SECRET) throw new Error('Falta la variable de entorno JWT_SECRET')
   try {
-    return jwt.verify(token, process.env.JWT_SECRET)
+    return jwt.verify(token, process.env.JWT_SECRET, { ignoreExpiration: ignorarVencimiento })
   } catch {
     return null
   }
