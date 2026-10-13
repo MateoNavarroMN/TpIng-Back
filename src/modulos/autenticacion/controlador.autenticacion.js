@@ -120,3 +120,8 @@ export const iniciarSesion = async (req, res) => {
     return res.status(500).json({ mensaje: 'No se pudo iniciar sesión' })
   }
 }
+
+// GET /api/auth/me: el usuario de la sesión actual (lo carga el middleware `autenticar`).
+export const obtenerUsuarioActual = (req, res) => {
+  res.status(200).json({ usuario: req.usuario })
+}
