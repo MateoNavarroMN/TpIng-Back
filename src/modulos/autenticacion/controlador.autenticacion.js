@@ -1,5 +1,19 @@
-import { crearJugadorCompleto } from '../usuarios/modelo.usuarios.js'
-import { encriptarPassword } from './seguridad.autenticacion.js'
+import {
+  buscarPerfil,
+  buscarPorEmail,
+  crearJugadorCompleto,
+  registrarAccesoExitoso,
+  registrarIntentoFallido,
+  reiniciarIntentos,
+} from '../usuarios/modelo.usuarios.js'
+import { crearSesion } from './modelo.autenticacion.js'
+import {
+  HASH_FALSO,
+  HORAS_SESION,
+  compararPassword,
+  encriptarPassword,
+  generarTokenJWT,
+} from './seguridad.autenticacion.js'
 import { normalizarDni, validarDatosRegistro, validarPassword } from './validaciones.autenticacion.js'
 
 // POST /api/auth/registro
@@ -42,5 +56,67 @@ export const registrarJugador = async (req, res) => {
     }
     console.error(error)
     return res.status(500).json({ mensaje: 'No se pudo crear la cuenta' })
+  }
+}
+
+const MAX_INTENTOS = 5
+const MINUTOS_ESPERA = 15
+
+const credencialesInvalidas = (res) => res.status(401).json({ mensaje: 'Credenciales inválidas' })
+
+const cuentaEnEspera = (res, bloqueoHasta) =>
+  res.status(423).json({
+    mensaje: 'Cuenta en espera, reintentá más tarde',
+    segundosRestantes: Math.max(1, Math.ceil((bloqueoHasta - Date.now()) / 1000)),
+  })
+
+// POST /api/auth/login
+export const iniciarSesion = async (req, res) => {
+  const { email, password } = req.body ?? {}
+
+  if (typeof email !== 'string' || !email.trim()) {
+    return res.status(400).json({ mensaje: 'Datos inválidos: el correo es obligatorio', campo: 'email' })
+  }
+  if (typeof password !== 'string' || !password) {
+    return res.status(400).json({ mensaje: 'Datos inválidos: la contraseña es obligatoria', campo: 'password' })
+  }
+
+  try {
+    const usuario = await buscarPorEmail(email)
+
+    // El correo no existe: se compara igual contra un hash falso para no delatarlo por el tiempo de respuesta
+    if (!usuario) {
+      await compararPassword(password, HASH_FALSO)
+      return credencialesInvalidas(res)
+    }
+
+    // Cuenta bloqueada por el Administrador: mismo mensaje genérico
+    if (usuario.estado === 'BLOQUEADO') return credencialesInvalidas(res)
+
+    // Cuenta en espera: se rechaza aunque la contraseña sea correcta.
+    // Si la espera ya venció, se reinicia el contador y se sigue con el login normal.
+    if (usuario.bloqueo_hasta) {
+      if (usuario.bloqueo_hasta > new Date()) return cuentaEnEspera(res, usuario.bloqueo_hasta)
+      await reiniciarIntentos(usuario.id)
+    }
+
+    // Contraseña incorrecta: suma un intento; al 5.º queda en espera 15 minutos
+    if (!(await compararPassword(password, usuario.password_hash))) {
+      const intento = await registrarIntentoFallido(usuario.id, MAX_INTENTOS, MINUTOS_ESPERA)
+      if (intento.bloqueo_hasta && intento.bloqueo_hasta > new Date()) {
+        return cuentaEnEspera(res, intento.bloqueo_hasta)
+      }
+      return credencialesInvalidas(res)
+    }
+
+    // Login correcto: reinicia intentos, anota el último acceso, crea la sesión y firma el token
+    await registrarAccesoExitoso(usuario.id)
+    const sesion = await crearSesion(usuario.id, HORAS_SESION)
+    const token = generarTokenJWT({ usuarioId: usuario.id, rol: usuario.rol, sesionId: sesion.id })
+
+    return res.status(200).json({ token, usuario: await buscarPerfil(usuario.id) })
+  } catch (error) {
+    console.error(error)
+    return res.status(500).json({ mensaje: 'No se pudo iniciar sesión' })
   }
 }

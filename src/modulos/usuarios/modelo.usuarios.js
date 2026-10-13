@@ -110,3 +110,8 @@ export const registrarAccesoExitoso = async (id, db = pool) => {
     [id]
   )
 }
+
+// Borra los intentos fallidos y el bloqueo.
+export const reiniciarIntentos = async (id, db = pool) => {
+  await db.query('update usuario set intentos_fallidos = 0, bloqueo_hasta = null where id = $1', [id])
+}
