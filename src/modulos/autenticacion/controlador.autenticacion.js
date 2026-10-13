@@ -6,13 +6,14 @@ import {
   registrarIntentoFallido,
   reiniciarIntentos,
 } from '../usuarios/modelo.usuarios.js'
-import { crearSesion } from './modelo.autenticacion.js'
+import { cerrarSesion, crearSesion } from './modelo.autenticacion.js'
 import {
   HASH_FALSO,
   HORAS_SESION,
   compararPassword,
   encriptarPassword,
   generarTokenJWT,
+  verificarTokenJWT,
 } from './seguridad.autenticacion.js'
 import { normalizarDni, validarDatosRegistro, validarPassword } from './validaciones.autenticacion.js'
 
@@ -59,6 +60,7 @@ export const registrarJugador = async (req, res) => {
   }
 }
 
+const REGEX_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const MAX_INTENTOS = 5
 const MINUTOS_ESPERA = 15
 
@@ -124,4 +126,22 @@ export const iniciarSesion = async (req, res) => {
 // GET /api/auth/me: el usuario de la sesión actual (lo carga el middleware `autenticar`).
 export const obtenerUsuarioActual = (req, res) => {
   res.status(200).json({ usuario: req.usuario })
+}
+
+// POST /api/auth/logout  (CU 1.2 · A2)
+// Cierra solo la sesión del token que llega.
+export const cerrarSesionActual = async (req, res) => {
+  try {
+    const [tipo, token] = (req.headers.authorization ?? '').split(' ')
+    const datos = tipo === 'Bearer' && token ? verificarTokenJWT(token, { ignorarVencimiento: true }) : null
+
+    // Con firma válida, el `sid` es una sesión nuestra. Un token falso no cierra nada.
+    if (datos && REGEX_UUID.test(datos.sid)) {
+      await cerrarSesion(datos.sid)
+    }
+    return res.status(200).json({ mensaje: 'Sesión cerrada' })
+  } catch (error) {
+    console.error(error)
+    return res.status(500).json({ mensaje: 'No se pudo cerrar la sesión' })
+  }
 }
