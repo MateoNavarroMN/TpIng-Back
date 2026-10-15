@@ -139,7 +139,7 @@ export const cerrarSesionActual = async (req, res) => {
     if (datos && REGEX_UUID.test(datos.sid)) {
       await cerrarSesion(datos.sid)
     }
-    return res.status(200).json({ mensaje: 'Sesión cerrada' })
+    return res.status(204).end()
   } catch (error) {
     console.error(error)
     return res.status(500).json({ mensaje: 'No se pudo cerrar la sesión' })

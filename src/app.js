@@ -4,6 +4,7 @@ import { pool } from './config/conexion.bd.js'
 import rutasEjemplo from './modulos/ejemplo/rutas.ejemplo.js'
 import rutasAutenticacion from './modulos/autenticacion/rutas.autenticacion.js'
 import rutasPerfil from './modulos/perfil/rutas.perfil.js'
+import rutasUsuarios from './modulos/usuarios/rutas.usuarios.js'
 
 const app = express()
 
@@ -31,6 +32,7 @@ app.get('/health', async (req, res) => {
 app.use('/api/ejemplo', rutasEjemplo)
 app.use('/api/auth', rutasAutenticacion)
 app.use('/api/auth', rutasAutenticacion)
+app.use('/api/usuarios', rutasUsuarios)
 app.use('/api/perfil', rutasPerfil)
 
 // Ruta no encontrada
