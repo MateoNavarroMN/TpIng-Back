@@ -1,4 +1,5 @@
 import { pool } from '../../config/conexion.bd.js'
+import { cerrarSesionesDeUsuario } from '../autenticacion/modelo.autenticacion.js'
 
 // Modelo de usuarios y jugadores.
 
@@ -114,4 +115,28 @@ export const registrarAccesoExitoso = async (id, db = pool) => {
 // Borra los intentos fallidos y el bloqueo.
 export const reiniciarIntentos = async (id, db = pool) => {
   await db.query('update usuario set intentos_fallidos = 0, bloqueo_hasta = null where id = $1', [id])
+}
+
+// Hash de la contraseña actual (para comprobar la "contraseña actual" al cambiarla).
+export const buscarHashPorId = async (id, db = pool) => {
+  const { rows } = await db.query('select password_hash from usuario where id = $1', [id])
+  return rows[0]?.password_hash ?? null
+}
+
+// Guarda el nuevo hash y cierra todas las demás sesiones del usuario, dejando abierta la actual.
+// Las dos cosas van en una transacción: o se hacen las dos o ninguna. Devuelve cuántas sesiones se cerraron.
+export const cambiarPassword = async (id, nuevoHash, sesionActualId) => {
+  const cliente = await pool.connect()
+  try {
+    await cliente.query('begin')
+    await cliente.query('update usuario set password_hash = $2 where id = $1', [id, nuevoHash])
+    const cerradas = await cerrarSesionesDeUsuario(id, sesionActualId, cliente)
+    await cliente.query('commit')
+    return cerradas
+  } catch (error) {
+    await cliente.query('rollback')
+    throw error
+  } finally {
+    cliente.release()
+  }
 }
