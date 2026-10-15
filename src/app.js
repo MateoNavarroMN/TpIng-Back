@@ -5,6 +5,7 @@ import rutasEjemplo from './modulos/ejemplo/rutas.ejemplo.js'
 import rutasAutenticacion from './modulos/autenticacion/rutas.autenticacion.js'
 import rutasPerfil from './modulos/perfil/rutas.perfil.js'
 import rutasUsuarios from './modulos/usuarios/rutas.usuarios.js'
+import rutasPassword from './modulos/perfil/rutas.password.js'
 
 const app = express()
 
@@ -31,7 +32,7 @@ app.get('/health', async (req, res) => {
 // Rutas de los módulos
 app.use('/api/ejemplo', rutasEjemplo)
 app.use('/api/auth', rutasAutenticacion)
-app.use('/api/auth', rutasAutenticacion)
+app.use('/api/perfil/password', rutasPassword)
 app.use('/api/usuarios', rutasUsuarios)
 app.use('/api/perfil', rutasPerfil)
 
