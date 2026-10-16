@@ -9,6 +9,7 @@ import rutasPassword from './modulos/perfil/rutas.password.js'
 import rutasConsultaUsuarios from './modulos/usuarios/rutas.consulta.usuarios.js'
 import rutasRolUsuarios from './modulos/usuarios/rutas.rol.usuarios.js'
 import rutasEstadoUsuarios from './modulos/usuarios/rutas.estado.usuarios.js'
+import rutasContactoUsuarios from './modulos/usuarios/rutas.contacto.usuarios.js'
 
 const app = express()
 
@@ -36,11 +37,12 @@ app.get('/health', async (req, res) => {
 app.use('/api/ejemplo', rutasEjemplo)
 app.use('/api/auth', rutasAutenticacion)
 app.use('/api/perfil/password', rutasPassword)
+app.use('/api/perfil', rutasPerfil)
 app.use('/api/usuarios', rutasUsuarios)
 app.use('/api/usuarios', rutasConsultaUsuarios)
-app.use('/api/perfil', rutasPerfil)
 app.use('/api/usuarios', rutasRolUsuarios)
 app.use('/api/usuarios', rutasEstadoUsuarios)
+app.use('/api/usuarios', rutasContactoUsuarios)
 
 // Ruta no encontrada
 app.use((req, res) => {
