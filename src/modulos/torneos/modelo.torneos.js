@@ -90,6 +90,34 @@ export const actualizarTorneo = async (id, datos, db = pool) => {
   return rowCount > 0 ? buscarTorneoPorId(id, db) : null
 }
 
+// Edita el torneo solo si sigue PLANIFICADO (CU 3.1 · A1). Bloquea la fila mientras tanto, así nadie
+// abre las inscripciones entre que se revisa el estado y se guardan los cambios.
+// Devuelve { resultado: 'NO_ENCONTRADO' | 'NO_EDITABLE' | 'OK', torneo }.
+export const editarTorneoPlanificado = async (id, datos) => {
+  const cliente = await pool.connect()
+  try {
+    await cliente.query('begin')
+    const actual = await bloquearTorneo(id, cliente)
+    if (!actual) {
+      await cliente.query('rollback')
+      return { resultado: 'NO_ENCONTRADO', torneo: null }
+    }
+    if (actual.estado !== 'PLANIFICADO') {
+      await cliente.query('rollback')
+      return { resultado: 'NO_EDITABLE', torneo: actual }
+    }
+    const torneo = await actualizarTorneo(id, datos, cliente)
+    await cliente.query('commit')
+    return { resultado: 'OK', torneo }
+  } catch (error) {
+    await cliente.query('rollback')
+    throw error
+  } finally {
+    cliente.release()
+  }
+}
+
+
 // Cambia el estado (y la fase si se indica). Si se pasa `faseActual: undefined` la fase no se toca.
 export const cambiarEstadoTorneo = async (id, estado, faseActual = undefined, db = pool) => {
   const { rowCount } = await db.query(
